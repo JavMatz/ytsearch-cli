@@ -8,6 +8,7 @@ ytsearch() {
 
   local per_page=5
   local offset=0
+  local channels=()
   local titles=()
   local ids=()
   local selection=""
@@ -18,7 +19,7 @@ ytsearch() {
     # Fetch results
     mapfile -t batch < <(yt-dlp "ytsearch$((offset + per_page)):$query" \
       --flat-playlist \
-      --print "%(title)s|||%(id)s" 2>/dev/null)
+      --print "%(uploader)s|||%(title)s|||%(id)s" 2>/dev/null)
 
     batch=("${batch[@]:$offset}")
 
@@ -28,15 +29,18 @@ ytsearch() {
     fi
 
     for line in "${batch[@]}"; do
-      title="${line%%|||*}"
+      channel="${line%%|||*}"
+      title="${line%|||*}"
+      title="${title#*|||}"
       id="${line##*|||}"
+      channels+=("$channel")
       titles+=("$title")
       ids+=("$id")
     done
 
     result_list=()
     for ((i = 0; i < ${#titles[@]}; i++)); do
-      result_list+=("$((i + 1)). ${titles[$i]}")
+      result_list+=("$((i + 1)). ${channels[$i]} - ${titles[$i]}")
     done
     result_list+=("[m] More results")
     result_list+=("[q] Quit")
