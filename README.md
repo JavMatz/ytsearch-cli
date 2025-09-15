@@ -5,9 +5,10 @@ A terminal-based YouTube search and stream tool using `yt-dlp`, `fzf`, and `mpv`
 ## 📦 Features
 
 - 🔍 Search YouTube videos from your terminal
+- 🎧 Download audio-only as an `mp3` file
 - 🎧 Stream audio-only with `bestaudio`
 - 📺 Select video quality from a clean table
-- 🎛️ Stream selected video+audio format via `mpv`
+- 🎛️ Stream selected video+audio format via `mpv` or directly download it.
 
 ## 🛠️ Requirements
 
