@@ -61,7 +61,11 @@ ytsearch() {
 
     local url="https://www.youtube.com/watch?v=$video_id"
 
-    echo -e "\nPlay [v]ideo or [a]udio only?"
+    echo -e "\nWhat you want to do?"
+    echo -e "\tPlay video [v]"
+    echo -e "\tPlay audio only [a]"
+    echo -e "\tDownload video [dv]"
+    echo -e "\tDownload audio only [da]"
     read -r mode
 
     if [[ "$mode" == "a" ]]; then
@@ -72,7 +76,7 @@ ytsearch() {
         continue
       fi
       mpv --no-video "$stream_url"
-    else
+    elif [[ $mode == "v" ]]; then
       echo "📺 Fetching available video formats..."
       mapfile -t formats < <(
         yt-dlp -F "$url" 2>/dev/null | awk '
@@ -114,6 +118,50 @@ ytsearch() {
         echo "❌ Invalid format selected."
         continue
       fi
+    elif [[ "$mode" == "da" ]]; then
+      echo "🎧 Downloading best available audio..."
+      yt-dlp --embed-metadata --ignore-errors --extract-audio --audio-format mp3 "$url"
+    elif [[ "$mode" == "dv" ]]; then
+      echo "📺 Fetching available video formats..."
+      mapfile -t formats < <(
+        yt-dlp -F "$url" 2>/dev/null | awk '
+        BEGIN {
+            FS = " +";
+            printf "%-6s │ %-4s │ %-9s │ %-4s │ %-10s │ %-7s │ %-6s │ %s\n", "ID", "EXT", "RES", "FPS", "SIZE", "BITRATE", "PROTO", "VCODEC"
+            print "───────────────────────────────────────────────────────────────────────────────────────────────"
+        }
+        /^[0-9]+/ && /video only/ {
+            id=$1
+            ext=$2
+            res=$3
+            fps=$4
+            size=$5
+            tbr=$6
+            proto=$7
+            vcodec=$(NF)
+            printf "%-6s │ %-4s │ %-9s │ %-4s │ %-10s │ %-7s │ %-6s │ %s\n", id, ext, res, fps, size, tbr, proto, vcodec
+        }'
+      )
+
+      if [[ ${#formats[@]} -eq 0 ]]; then
+        echo "❌ No video-only formats found."
+        continue
+      fi
+      selected=$(printf "%s\n" "${formats[@]}" |
+        fzf --height=50% --reverse --prompt="Select video quality: " \
+          --preview "echo {}" --border --header-lines=2)
+
+      if [[ "$selected" =~ ^([0-9]+) ]]; then
+        format_id="${BASH_REMATCH[1]}"
+        echo "⏳ Downloading selected format (ID: $format_id) with best audio..."
+        yt-dlp -f "${format_id}+bestaudio" "$url"
+        # TODO: Download best quality if this fails
+      else
+        echo "❌ Invalid format selected."
+        continue
+      fi
+    else
+      echo "❌ Invalid option selected"
     fi
     break
   done
